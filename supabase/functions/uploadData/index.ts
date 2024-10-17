@@ -33,13 +33,12 @@ Deno.serve(async (req) => {
     const latitude = formData.get('latitude');
     const longitude = formData.get('longitude');
     const description = formData.get('description');
-    const timestamp = formData.get('timestamp');
     const is_iot = formData.get('is_iot');
     const iot_id = formData.get('iot_id');
     const file = formData.get('file') as File;
 
     // Check for missing required fields
-    const requiredFields = ['userid', 'latitude', 'longitude', 'description', 'timestamp', 'is_iot'];
+    const requiredFields = ['userid', 'latitude', 'longitude', 'description',  'is_iot'];
     for (const field of requiredFields) {
       if (!formData.has(field)) {
         return new Response(JSON.stringify({
@@ -72,7 +71,6 @@ Deno.serve(async (req) => {
       longitude,
       description,
       status: 'Submitted', // Automatically setting status to 'Submitted'
-      timestamp,
       is_iot: is_iot === 'true', // Convert string to boolean
       iot_id: null,
     };

@@ -1,11 +1,25 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import bcrypt from 'https://deno.land/x/bcrypt/mod.ts';
 
 // Initialize Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Function to verify the password using Web Crypto API (PBKDF2)
+async function verifyPassword(storedPassword: string, inputPassword: string): Promise<boolean> {
+  const [saltString, hashString] = storedPassword.split(':'); // Split stored password into salt and hash
+  const salt = Uint8Array.from(saltString.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))); // Convert salt back to Uint8Array
+
+  const enc = new TextEncoder().encode(inputPassword + salt); // Combine input password with stored salt
+  const hashBuffer = await crypto.subtle.digest('SHA-256', enc); // Hash the salted input password
+  const hashArray = Array.from(new Uint8Array(hashBuffer)); // Convert hash to byte array
+  const inputHashString = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // Convert bytes to hex
+
+  return inputHashString === hashString; // Compare input hash with stored hash
+}
+
+
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
@@ -35,7 +49,7 @@ Deno.serve(async (req) => {
     // Check if user exists with the provided email
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, email, password, role')
+      .select('userid, email, password, role')
       .eq('email', email)
       .single();
 
@@ -47,8 +61,8 @@ Deno.serve(async (req) => {
       }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
-    // Compare provided password with the stored hashed password using bcrypt
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    // Compare provided password with the stored hashed password
+    const passwordMatch = await verifyPassword(user.password, password);
 
     if (!passwordMatch) {
       return new Response(JSON.stringify({
