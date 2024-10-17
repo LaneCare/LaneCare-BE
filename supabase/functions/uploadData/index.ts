@@ -99,6 +99,32 @@ Deno.serve(async (req) => {
       }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
+    // After validating user and IoT data, before inserting into the database
+    const geocodeApiKey = Deno.env.get('GEOCODE_KEY') as string;
+    const geocodeUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${latitude}&lon=${longitude}&format=json&apiKey=${geocodeApiKey}`;
+
+    try {
+      const geocodeResponse = await fetch(geocodeUrl);
+      const geocodeData = await geocodeResponse.json();
+
+      if (geocodeData.results && geocodeData.results.length > 0) {
+        const locationInfo = geocodeData.results[0];
+        data.country = locationInfo.country;
+        data.city = locationInfo.city;
+        data.county = locationInfo.county;
+        data.state = locationInfo.state;
+        data.street = locationInfo.street;
+      }
+    } catch (error) {
+      console.error('Error fetching geocode data:', error);
+      return new Response(JSON.stringify({
+        status: 500,
+        message: 'Error uploading file',
+        data: null
+      }), { status: 500, headers: { "Content-Type": "application/json" } });
+      // Optionally handle the error, e.g., set default values or return an error response
+    }
+
     // Upload file to Supabase Storage
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
 
@@ -170,5 +196,3 @@ Deno.serve(async (req) => {
     }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 });
-
-
