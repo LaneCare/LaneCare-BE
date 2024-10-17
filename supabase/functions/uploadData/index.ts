@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       latitude,
       longitude,
       description,
-      status: 'Submitted', // Automatically setting status to 'Submitted'
+      status: 'On-Review', // Automatically setting status to 'Submitted'
       is_iot: is_iot === 'true', // Convert string to boolean
       iot_id: null,
     };
@@ -114,6 +114,8 @@ Deno.serve(async (req) => {
         data.county = locationInfo.county;
         data.state = locationInfo.state;
         data.street = locationInfo.street;
+        data.postcode = locationInfo.postcode;
+        data.village = locationInfo.village;
       }
     } catch (error) {
       console.error('Error fetching geocode data:', error);
@@ -165,7 +167,8 @@ Deno.serve(async (req) => {
     // Insert data into the database
     const { data: insertedData, error: insertError } = await supabase
       .from('reports')
-      .insert([data]);
+      .insert([data])
+      .select();
 
     if (insertError) {
       console.error('Error inserting data:', insertError);
@@ -174,6 +177,26 @@ Deno.serve(async (req) => {
         message: 'Error inserting data into database',
         data: null
       }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+
+    // Create a new row in the report_log table
+    if (insertedData && insertedData.length > 0) {
+      const reportId = insertedData[0].reportid; // Assuming the id is returned in the insertedData
+      const logData = {
+        reportid: reportId,
+        userid: userid,
+        comments: `User ${userid} created a new report at ${data.city || 'unknown location'}`,
+        status: 'On-Review'
+      };
+
+      const { error: logError } = await supabase
+        .from('report_log')
+        .insert([logData]);
+
+      if (logError) {
+        console.error('Error inserting log data:', logError);
+        // Optionally handle the error, e.g., return a warning in the response
+      }
     }
 
     return new Response(JSON.stringify({
