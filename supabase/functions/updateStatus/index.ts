@@ -60,10 +60,12 @@ Deno.serve(async (req) => {
     }
 
     // 3. Update the status of the report if the user is authorized
-    const { error: updateError } = await supabase
+    const { data: updatedReport, error: updateError } = await supabase
       .from('reports')
       .update({ status })
-      .eq('reportid', reportid);
+      .eq('reportid', reportid)
+      .select()
+      .single();
 
     if (updateError) {
       return new Response(JSON.stringify({
@@ -71,6 +73,23 @@ Deno.serve(async (req) => {
         message: 'Error updating report status',
         data: null
       }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+
+    // 4. Create a new entry in the report_log table
+    const logData = {
+      reportid: reportid,
+      userid: userid,
+      comments: `User ${userid} (${userRole}) updated the report status to ${status}`,
+      status: status
+    };
+
+    const { error: logError } = await supabase
+      .from('report_log')
+      .insert([logData]);
+
+    if (logError) {
+      console.error('Error inserting log data:', logError);
+      // Optionally handle the error, e.g., return a warning in the response
     }
 
     return new Response(JSON.stringify({
