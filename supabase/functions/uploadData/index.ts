@@ -13,6 +13,19 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 Deno.serve(async (req) => {
+  // Add CORS headers
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers, status: 204 });
+  }
+
   console.log('Using Supabase Project URL:', supabaseUrl);
 
   console.log('Using Supabase Service Role Key:', supabaseKey.substring(0, 6) + '...'); 
@@ -22,7 +35,7 @@ Deno.serve(async (req) => {
       status: 405,
       message: 'Method Not Allowed',
       data: null
-    }), { status: 405, headers: { "Content-Type": "application/json" } });
+    }), { status: 405, headers });
   }
   
   try {
@@ -45,7 +58,7 @@ Deno.serve(async (req) => {
           status: 400,
           message: `Missing required field: ${field}`,
           data: null
-        }), { status: 400, headers: { "Content-Type": "application/json" } });
+        }), { status: 400, headers });
       }
     }
 
@@ -61,7 +74,7 @@ Deno.serve(async (req) => {
         status: 400,
         message: `Invalid userid: ${userid}`,
         data: null
-      }), { status: 400, headers: { "Content-Type": "application/json" } });
+      }), { status: 400, headers });
     }
 
     // 2. If is_iot is true, check if iot_id exists and matches the userid
@@ -87,7 +100,7 @@ Deno.serve(async (req) => {
           status: 400,
           message: `Invalid iot_id or iot_id does not belong to userid: ${userid}`,
           data: null
-        }), { status: 400, headers: { "Content-Type": "application/json" } });
+        }), { status: 400, headers });
       }
 
       data.iot_id = iot_id;
@@ -96,7 +109,7 @@ Deno.serve(async (req) => {
         status: 400,
         message: 'Missing iot_id for IoT report',
         data: null
-      }), { status: 400, headers: { "Content-Type": "application/json" } });
+      }), { status: 400, headers });
     }
 
     // After validating user and IoT data, before inserting into the database
@@ -123,7 +136,7 @@ Deno.serve(async (req) => {
         status: 500,
         message: 'Error uploading file',
         data: null
-      }), { status: 500, headers: { "Content-Type": "application/json" } });
+      }), { status: 500, headers });
       // Optionally handle the error, e.g., set default values or return an error response
     }
 
@@ -136,7 +149,7 @@ Deno.serve(async (req) => {
         status: 500,
         message: 'Error accessing storage buckets',
         data: null
-      }), { status: 500, headers: { "Content-Type": "application/json" } });
+      }), { status: 500, headers });
     }
 
     let imageUrl = '';
@@ -151,7 +164,7 @@ Deno.serve(async (req) => {
           status: 500,
           message: 'Error uploading file',
           data: null
-        }), { status: 500, headers: { "Content-Type": "application/json" } });
+        }), { status: 500, headers });
       }
 
       const { data: { publicUrl } } = supabase.storage
@@ -176,7 +189,7 @@ Deno.serve(async (req) => {
         status: 500,
         message: 'Error inserting data into database',
         data: null
-      }), { status: 500, headers: { "Content-Type": "application/json" } });
+      }), { status: 500, headers });
     }
 
     // Create a new row in the report_log table
@@ -203,19 +216,13 @@ Deno.serve(async (req) => {
       status: 200,
       message: 'Data uploaded successfully',
       data: insertedData
-    }), { 
-      headers: { 
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      status: 200
-    });
+    }), { headers, status: 200 });
   } catch (error) {
     console.error('Unexpected error:', error);
     return new Response(JSON.stringify({
       status: 500,
       message: 'Internal Server Error',
       data: null
-    }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }), { status: 500, headers });
   }
 });
