@@ -35,10 +35,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Fetch all reports from the database
+    // Fetch reports with user details and logs
     const { data: reports, error } = await supabase
       .from('reports')
-      .select('*');
+      .select(`
+        *,
+        user:users!reports_userid_fkey (
+          userid,
+          name,
+          email,
+          role
+        ),
+        logs:report_log (
+          logid,
+          userid,
+          comments,
+          status,
+          created_at,
+          user:users!report_log_userid_fkey (
+            name,
+            role
+          )
+        )
+      `)
+      .order('created_at', { foreignTable: 'logs', ascending: false });
 
     if (error) {
       console.error('Error fetching reports:', error);
@@ -49,10 +69,18 @@ Deno.serve(async (req) => {
       }), { status: 500, headers });
     }
 
+    // Process the reports to ensure logs are properly sorted
+    const processedReports = reports.map(report => ({
+      ...report,
+      logs: report.logs.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    }));
+
     return new Response(JSON.stringify({
       status: 200,
       message: 'Reports fetched successfully',
-      data: reports
+      data: processedReports
     }), { headers, status: 200 });
   } catch (error) {
     console.error('Unexpected error:', error);
