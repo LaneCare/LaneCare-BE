@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // 2. Check if the user is admin or super admin
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, name')
       .eq('userid', userid)
       .single();
 
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     }
 
     const userRole = userData.role;
-
+    const userName = userData.name;
     if (userRole !== 'admin' && userRole !== 'super_admin') {
       return new Response(JSON.stringify({
         status: 403,
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     const logData = {
       reportid: reportid,
       userid: userid,
-      comments: `User ${userid} (${userRole}) updated the report status to ${status}`,
+      comments: `User ${userName} (${userRole}) updated the report status to ${status}`,
       status: status
     };
 

@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     // 1. Check if the userid exists in the users table
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('userid')
+      .select('userid, name')
       .eq('userid', userid)
       .single();
 
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
       const logData = {
         reportid: reportId,
         userid: userid,
-        comments: `User ${userid} created a new report at ${data.city || 'unknown location'}`,
+        comments: `User ${userData.name} created a new report at ${data.city || 'unknown location'}`,
         status: 'On-Review'
       };
 
