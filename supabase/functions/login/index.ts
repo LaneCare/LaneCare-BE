@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     // Check if user exists with the provided email
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('userid, email, password, role')
+      .select('userid, name, email, password, role')
       .eq('email', email)
       .single();
 

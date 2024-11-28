@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     const reportid = (formData.get('reportid') as string)?.trim();
 
     // 1. Validate the status
-    const validStatuses = ['Submitted', 'On-Review', 'Declined', 'Verified'];
+    const validStatuses = ['Submitted', 'On-Review', 'Declined', 'Verified', 'On-Going Maintenance','Finished'];
     if (!validStatuses.includes(status)) {
       return new Response(JSON.stringify({
         status: 400,
